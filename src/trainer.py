@@ -17,7 +17,7 @@ def compute_metric(eval_pred):
     }
 
 
-def run_experiment(train_dataset, eval_dataset, data_collator, output_dir,
+def run_experiment(model, train_dataset, eval_dataset, data_collator, output_dir,
                    gradient_accumulation_steps=1, epoch=5, seed=42):
     train_args = TrainingArguments(
         output_dir=output_dir,
@@ -29,7 +29,8 @@ def run_experiment(train_dataset, eval_dataset, data_collator, output_dir,
     )
 
     trainer = Trainer(
-        train_args,
+        model=model,
+        args=train_args,
         data_collator=data_collator,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,

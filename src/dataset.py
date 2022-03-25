@@ -13,7 +13,7 @@ class CSQA2DatasetBase(Dataset):
         with open(data_path, 'r') as f:
             for i, line in enumerate(f.readlines()):
                 example = json.loads(line)
-                example['label'] = 1 if example['question'] == "yes" else "no"
+                example['label'] = 1 if example['question'] == "yes" else 0
                 example['tokenized_question'] = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(example['question']))
 
                 self.data[i] = example
@@ -34,8 +34,8 @@ class CSQA2DatasetBase(Dataset):
 
 
         for example in batch:
-            input_id = self.tokenizer.cls_token_id + \
-                       example['tokenized_question'][-(padding_length-2):] + self.tokenizer.sep_token_id
+            input_id = [self.tokenizer.cls_token_id] + \
+                       example['tokenized_question'][-(padding_length-2):] + [self.tokenizer.sep_token_id]
             attention_mask = [1 for i in range(len(input_id))] + [0 for i in range(padding_length - len(input_id))]
             input_id += [self.tokenizer.pad_token_id for i in range(padding_length - len(input_id))]
             input_ids.append(input_id)
@@ -43,9 +43,9 @@ class CSQA2DatasetBase(Dataset):
             labels.append(example['label'])
 
         return {
-            input_ids: torch.LongTensor(input_ids),
-            attention_mask: torch.LongTensor(attention_masks),
-            labels: torch.LongTensor(labels)
+            "input_ids": torch.LongTensor(input_ids),
+            "attention_mask": torch.LongTensor(attention_masks),
+            "labels": torch.LongTensor(labels)
         }
 
 

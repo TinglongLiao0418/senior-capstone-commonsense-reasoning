@@ -1,1 +1,3 @@
 data/knowledge/conceptnet.csv
+.idea
+__pycache__/

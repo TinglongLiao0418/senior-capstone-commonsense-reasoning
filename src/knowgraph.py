@@ -1,58 +1,60 @@
 # coding: utf-8
 """
-Based on K-BERT KnowledgeGraph
-by Weijie Liu, Peng Zhou, Zhe Zhao, Zhiruo Wang, Qi Ju, Haotang Deng, Ping Wang
+KnowledgeGraph
 """
 import os
-import src.config as config
+import brain.config as config
+import pkuseg
 import numpy as np
-import random
 
 
 class KnowledgeGraph(object):
+    """
+    spo_files - list of Path of *.spo files, or default kg name. e.g., ['HowNet']
+    """
 
-    def __init__(self, knowledge_path, predicate=False):
+    def __init__(self, spo_files, predicate=False):
         self.predicate = predicate
-        self.knowledge_path = knowledge_path
+        self.spo_file_paths = [config.KGS.get(f, f) for f in spo_files]
         self.lookup_table = self._create_lookup_table()
         self.segment_vocab = list(self.lookup_table.keys()) + config.NEVER_SPLIT_TAG
+        self.tokenizer = pkuseg.pkuseg(model_name="default", postag=False, user_dict=self.segment_vocab)
         self.special_tags = set(config.NEVER_SPLIT_TAG)
 
     def _create_lookup_table(self):
-        """
-        Use retrieved ConceptNet as KG
-        """
         lookup_table = {}
-        with open(self.knowledge_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                try:
-                    subj, pred, obje = line.strip().split("\t")    
-                except:
-                    print("[KnowledgeGraph] Bad json:", line)
-                if self.predicate:
-                    value = "{} {}".format(pred, obje)
-                else:
-                    value = obje
-                if subj in lookup_table.keys():
-                    lookup_table[subj].add(value)
-                else:
-                    lookup_table[subj] = set([value])
+        for spo_path in self.spo_file_paths:
+            print("[KnowledgeGraph] Loading spo from {}".format(spo_path))
+            with open(spo_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    try:
+                        subj, pred, obje = line.strip().split("\t")    
+                    except:
+                        print("[KnowledgeGraph] Bad spo:", line)
+                    if self.predicate:
+                        value = pred + obje
+                    else:
+                        value = obje
+                    if subj in lookup_table.keys():
+                        lookup_table[subj].add(value)
+                    else:
+                        lookup_table[subj] = set([value])
         return lookup_table
 
-    def add_knowledge_with_vm(self, data_batch, max_entities=config.MAX_ENTITIES, add_pad=True, max_length=128):
+    def add_knowledge_with_vm(self, sent_batch, max_entities=config.MAX_ENTITIES, add_pad=True, max_length=128):
         """
-        input: data_batch
+        input: sent_batch - list of sentences, e.g., ["abcd", "efgh"]
         return: know_sent_batch - list of sentences with entites embedding
                 position_batch - list of position index of each character.
                 visible_matrix_batch - list of visible matrixs
                 seg_batch - list of segment tags
         """
+        split_sent_batch = [self.tokenizer.cut(sent) for sent in sent_batch]
         know_sent_batch = []
         position_batch = []
         visible_matrix_batch = []
         seg_batch = []
-
-        for data_sample in data_batch:
+        for split_sent in split_sent_batch:
 
             # create tree
             sent_tree = []
@@ -61,34 +63,32 @@ class KnowledgeGraph(object):
             pos_idx = -1
             abs_idx = -1
             abs_idx_src = []
+            for token in split_sent:
 
-            token = data_sample["topic_prompt"]
+                entities = list(self.lookup_table.get(token, []))[:max_entities]
+                sent_tree.append((token, entities))
 
-            entities = list(self.lookup_table.get(token, []))
-            random.shuffle(entities)
-            sent_tree.append((token, entities[:max_entities]))
+                if token in self.special_tags:
+                    token_pos_idx = [pos_idx+1]
+                    token_abs_idx = [abs_idx+1]
+                else:
+                    token_pos_idx = [pos_idx+i for i in range(1, len(token)+1)]
+                    token_abs_idx = [abs_idx+i for i in range(1, len(token)+1)]
+                abs_idx = token_abs_idx[-1]
 
-            if token in self.special_tags:
-                token_pos_idx = [pos_idx+1]
-                token_abs_idx = [abs_idx+1]
-            else:
-                token_pos_idx = [pos_idx+i for i in range(1, len(token)+1)]
-                token_abs_idx = [abs_idx+i for i in range(1, len(token)+1)]
-            abs_idx = token_abs_idx[-1]
+                entities_pos_idx = []
+                entities_abs_idx = []
+                for ent in entities:
+                    ent_pos_idx = [token_pos_idx[-1] + i for i in range(1, len(ent)+1)]
+                    entities_pos_idx.append(ent_pos_idx)
+                    ent_abs_idx = [abs_idx + i for i in range(1, len(ent)+1)]
+                    abs_idx = ent_abs_idx[-1]
+                    entities_abs_idx.append(ent_abs_idx)
 
-            entities_pos_idx = []
-            entities_abs_idx = []
-            for ent in entities[:max_entities]:
-                ent_pos_idx = [token_pos_idx[-1] + i for i in range(1, len(ent)+1)]
-                entities_pos_idx.append(ent_pos_idx)
-                ent_abs_idx = [abs_idx + i for i in range(1, len(ent)+1)]
-                abs_idx = ent_abs_idx[-1]
-                entities_abs_idx.append(ent_abs_idx)
-
-            pos_idx_tree.append((token_pos_idx, entities_pos_idx))
-            pos_idx = token_pos_idx[-1]
-            abs_idx_tree.append((token_abs_idx, entities_abs_idx))
-            abs_idx_src += token_abs_idx
+                pos_idx_tree.append((token_pos_idx, entities_pos_idx))
+                pos_idx = token_pos_idx[-1]
+                abs_idx_tree.append((token_abs_idx, entities_abs_idx))
+                abs_idx_src += token_abs_idx
 
             # Get know_sent and pos
             know_sent = []

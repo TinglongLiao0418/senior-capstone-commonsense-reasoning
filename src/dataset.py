@@ -1,6 +1,8 @@
+from collections import defaultdict
 import json
-
 import pandas as pd
+import numpy as np
+import random
 import torch
 from torch.utils.data import Dataset
 
@@ -14,7 +16,7 @@ class CSQA2DatasetBase(Dataset):
             for i, line in enumerate(f.readlines()):
                 example = json.loads(line)
                 example['label'] = 1 if example['question'] == "yes" else 0
-                example['tokenized_question'] = tokenizer.convert_tokens_to_ids(tokenizer.tokenize(example['question']))
+                example['tokenized_question'] = tokenizer.tokenize(example['question'])
 
                 self.data[i] = example
 
@@ -36,7 +38,7 @@ class CSQA2DatasetBase(Dataset):
         for example in batch:
             input_id = [self.tokenizer.cls_token_id] + \
                        example['tokenized_question'][-(padding_length-2):] + [self.tokenizer.sep_token_id]
-            attention_mask = [1 for i in range(len(input_id))] + [0 for i in range(padding_length - len(input_id))]
+            attention_mask = [1 for i in range(len(input_id))] + [self.tokenizer.pad_token_id for i in range(padding_length - len(input_id))]
             input_id += [self.tokenizer.pad_token_id for i in range(padding_length - len(input_id))]
             input_ids.append(input_id)
             attention_masks.append(attention_mask)
@@ -68,6 +70,55 @@ class CSQA2DatasetWithLink(CSQA2DatasetBase):
                     'end': lnk[e]
                 })
             example['links'] = links
+
+class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
+    def __init__(self, config, data_path, tokenizer, knowledge_path):
+        super(CSQA2DatasetWithVisibleMatrix, self).__init__(config, data_path, tokenizer)
+        self._create_lookup_table(knowledge_path)
+    
+    def _create_lookup_table(self, knowledge_path):
+        self.knowledge = defaultdict(lambda: set)
+
+        with open(knowledge_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                relation, start, end = [i.lower().replace('_', ' ') for i in line.strip().split("\t")]
+                value = "{} {}".format(relation, end)
+                self.knowledge[start].add(value)
+
+    def collate_fn(self, batch):
+        visible_matrix = np.zeros((self.config['max_seq_length'], self.config['max_seq_length']))
+        position_ids = np.zeros(self.config['max_seq_length'])
+        labels = []
+        for example in batch:
+
+            topic_prompt = example['topic_prompt']
+            entities = self.knowledge[topic_prompt]
+
+            # TODO: find the start and end of the topic prompt
+            pos_start, pos_end = example['tokenized_question'].index(topic_prompt)
+
+            if len(entities) > self.config['max_entities']:
+                entities = random.sample(entities, self.config['max_entities'])
+            
+            abs_idx = pos_end + 1
+            input_tokens = example['tokenized_question'][:abs_idx]
+            for i in range(abs_idx):
+                position_ids = i
+                
+            for e in entities:
+                offset = 0
+                for token in self.tokenizer.tokenize(e):
+                    position_ids[abs_idx + offset] = pos_start + offset
+                    input_tokens.extend(token)
+            
+            labels.append(example['label'])
+
+        return {
+            "input_ids": torch.LongTensor(input_ids),
+            "position_ids": torch.LongTensor(position_ids),
+            "visible_matrix": torch.LongTensor(visible_matrix),
+            "labels": torch.LongTensor(labels)
+        }
 
 
 if __name__ == '__main__':

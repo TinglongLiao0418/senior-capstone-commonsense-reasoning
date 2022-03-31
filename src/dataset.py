@@ -89,28 +89,67 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
         visible_matrix = np.zeros((self.config['max_seq_length'], self.config['max_seq_length']))
         position_ids = np.zeros(self.config['max_seq_length'])
         labels = []
+
         for example in batch:
 
-            topic_prompt = example['topic_prompt']
-            entities = self.knowledge[topic_prompt]
-
-            # TODO: find the start and end of the topic prompt
-            pos_start, pos_end = example['tokenized_question'].index(topic_prompt)
+            tokenized_prompt = self.tokenizer.tokenize(example['topic_prompt'])
+            entities = self.knowledge[example['topic_prompt']]
 
             if len(entities) > self.config['max_entities']:
                 entities = random.sample(entities, self.config['max_entities'])
+
+            # find the start and end of the topic prompt in the question
+            prompt_start, prompt_end = -1
+            for i in range(len(example['tokenized_question'])):
+                if example['tokenized_question'][i] == tokenized_prompt[0]:
+                    n = 1
+                    while n < len(tokenized_prompt) and example['tokenized_question'][i + n] == tokenized_prompt[n]:
+                        n += 1
+                    
+                    if n == len(tokenized_prompt):
+                        prompt_start = 1
+                        prompt_end = i + n - 1
+                        break
             
-            abs_idx = pos_end + 1
-            input_tokens = example['tokenized_question'][:abs_idx]
-            for i in range(abs_idx):
-                position_ids = i
-                
+            input_tokens = [tokenizer.cls_token] + example['tokenized_question'][:prompt_end + 1]
+            remaining_len = len(example['tokenized_question'][prompt_end + 1:])
+            entity_start = prompt_end + 2
+            for i in range(entity_start):
+                visible_matrix[i][i] = 1
+                position_ids[i] = i
+
+            curr_start = entity_start
             for e in entities:
-                offset = 0
-                for token in self.tokenizer.tokenize(e):
-                    position_ids[abs_idx + offset] = pos_start + offset
-                    input_tokens.extend(token)
+                tokenized_entity = self.tokenizer.tokenize(e)
+                if (
+                        prompt_end < 0 or 
+                        len(input_tokens) + len(tokenized_entity) + remaining_len >= self.config['max_seq_length']
+                    ):
+                    # if not finding the prompt within the question
+                    # or adding the entity makes the seq exceed max_seq_length
+                    break
+
+                for i in range(len(tokenized_entity)):
+                    for j in range(prompt_start + 1, curr_start + len(tokenized_entity)):
+                        # words within the prompt and entity can see each other
+                        visible_matrix[curr_start + i][j] = 1
+
+                    position_ids[curr_start + i] = entity_start + i   
+
+                input_tokens.extend(tokenized_entity)
+                curr_start += len(tokenized_entity)
+
+            input_tokens += example['tokenized_question'][prompt_end + 1:]
+            for i in range(entity_start):
+                for j in range(curr_start, len(input_tokens) + 1):
+                    visible_matrix[i][j] = 1
+                    visible_matrix[j][i] = 1
+                    visible_matrix[j][j] = 1
+                    position_ids[curr_start + j] = entity_start + j
             
+            input_ids = self.tokenizer.convert_tokens_to_ids(input_tokens) + [self.tokenizer.sep_token_id]
+            input_ids += [self.tokenizer.pad_token_id for _ in range(self.config['max_seq_length'] - len(input_ids))]
+
             labels.append(example['label'])
 
         return {

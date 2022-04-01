@@ -1,4 +1,3 @@
-from collections import defaultdict
 import json
 import pandas as pd
 import numpy as np
@@ -77,20 +76,23 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
         self._create_lookup_table(knowledge_path)
     
     def _create_lookup_table(self, knowledge_path):
-        self.knowledge = defaultdict(lambda: set)
+        self.knowledge = dict()
 
         with open(knowledge_path, 'r', encoding='utf-8') as f:
             for line in f:
                 relation, start, end = [i.lower().replace('_', ' ') for i in line.strip().split("\t")]
                 value = "{} {}".format(relation, end)
-                self.knowledge[start].add(value)
+                try:
+                    self.knowledge[start].add(value)
+                except:
+                    self.knowledge[start] = {value}
 
     def collate_fn(self, batch):
-        visible_matrix = np.zeros((self.config['max_seq_length'], self.config['max_seq_length']))
-        position_ids = np.zeros(self.config['max_seq_length'])
-        labels = []
+        input_ids, position_ids, visible_matrices, labels = [], [], [], []
 
         for example in batch:
+            visible_matrix = np.zeros((self.config['max_seq_length'], self.config['max_seq_length']), dtype=int)
+            position_id = np.zeros(self.config['max_seq_length'], dtype=int)
 
             tokenized_prompt = self.tokenizer.tokenize(example['topic_prompt'])
             entities = self.knowledge[example['topic_prompt']]
@@ -99,7 +101,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                 entities = random.sample(entities, self.config['max_entities'])
 
             # find the start and end of the topic prompt in the question
-            prompt_start, prompt_end = -1
+            prompt_start, prompt_end = -1, -1
             for i in range(len(example['tokenized_question'])):
                 if example['tokenized_question'][i] == tokenized_prompt[0]:
                     n = 1
@@ -116,7 +118,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
             entity_start = prompt_end + 2
             for i in range(entity_start):
                 visible_matrix[i][i] = 1
-                position_ids[i] = i
+                position_id[i] = i
 
             curr_start = entity_start
             for e in entities:
@@ -134,7 +136,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                         # words within the prompt and entity can see each other
                         visible_matrix[curr_start + i][j] = 1
 
-                    position_ids[curr_start + i] = entity_start + i   
+                    position_id[curr_start + i] = entity_start + i   
 
                 input_tokens.extend(tokenized_entity)
                 curr_start += len(tokenized_entity)
@@ -145,17 +147,20 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                     visible_matrix[i][j] = 1
                     visible_matrix[j][i] = 1
                     visible_matrix[j][j] = 1
-                    position_ids[curr_start + j] = entity_start + j
+                    position_id[curr_start + j] = entity_start + j
             
-            input_ids = self.tokenizer.convert_tokens_to_ids(input_tokens) + [self.tokenizer.sep_token_id]
-            input_ids += [self.tokenizer.pad_token_id for _ in range(self.config['max_seq_length'] - len(input_ids))]
+            input_id = self.tokenizer.convert_tokens_to_ids(input_tokens) + [self.tokenizer.sep_token_id]
+            input_id += [self.tokenizer.pad_token_id for _ in range(self.config['max_seq_length'] - len(input_id))]
 
+            input_ids.append(input_id)
+            position_ids.append(position_id)
+            visible_matrices.append(visible_matrix)
             labels.append(example['label'])
 
         return {
             "input_ids": torch.LongTensor(input_ids),
             "position_ids": torch.LongTensor(position_ids),
-            "visible_matrix": torch.LongTensor(visible_matrix),
+            "visible_matrices": torch.LongTensor(visible_matrices),
             "labels": torch.LongTensor(labels)
         }
 
@@ -166,7 +171,6 @@ if __name__ == '__main__':
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
     datapath = '../data/csqa2/dev.json'
     knowledgepath = '../data/knowledge/conceptnet.csv'
-    dataset = CSQA2DatasetBase(config=config, tokenizer=tokenizer, data_path=datapath)
+    dataset = CSQA2DatasetWithVisibleMatrix(config=config, tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
 
-    dataset = CSQA2DatasetWithLink(config=config, tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
     print(dataset[0])

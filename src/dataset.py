@@ -132,9 +132,12 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                     break
 
                 for i in range(len(tokenized_entity)):
-                    for j in range(prompt_start + 1, curr_start + len(tokenized_entity)):
+                    for j in range(prompt_start + 1, entity_start):
                         # words within the prompt and entity can see each other
                         visible_matrix[curr_start + i][j] = 1
+
+                    for j in range(len(tokenized_entity)):
+                        visible_matrix[curr_start + i][curr_start + j] = 1
 
                     position_id[curr_start + i] = entity_start + i   
 

@@ -36,7 +36,8 @@ class CSQA2DatasetBase(Dataset):
 
         for example in batch:
             input_id = [self.tokenizer.cls_token_id] + \
-                       example['tokenized_question'][-(padding_length-2):] + [self.tokenizer.sep_token_id]
+                       self.tokenizer.convert_tokens_to_ids(example['tokenized_question'][-(padding_length-2):]) +\
+                       [self.tokenizer.sep_token_id]
             attention_mask = [1 for i in range(len(input_id))] + [self.tokenizer.pad_token_id for i in range(padding_length - len(input_id))]
             input_id += [self.tokenizer.pad_token_id for i in range(padding_length - len(input_id))]
             input_ids.append(input_id)
@@ -113,7 +114,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                         prompt_end = i + n - 1
                         break
             
-            input_tokens = [tokenizer.cls_token] + example['tokenized_question'][:prompt_end + 1]
+            input_tokens = [self.tokenizer.cls_token] + example['tokenized_question'][:prompt_end + 1]
             remaining_len = len(example['tokenized_question'][prompt_end + 1:])
             entity_start = prompt_end + 2
             for i in range(entity_start):
@@ -163,7 +164,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
         return {
             "input_ids": torch.LongTensor(input_ids),
             "position_ids": torch.LongTensor(position_ids),
-            "visible_matrices": torch.LongTensor(visible_matrices),
+            "attention_mask": torch.LongTensor(visible_matrices),
             "labels": torch.LongTensor(labels)
         }
 

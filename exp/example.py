@@ -1,5 +1,4 @@
 from transformers import BertForSequenceClassification
-
 from transformers import AutoTokenizer
 
 from src.dataset import CSQA2DatasetBase

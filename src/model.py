@@ -22,7 +22,7 @@ class KBERT(BertModel):
             self,
             input_ids=None,
             attention_mask=None,
-            visible_matrix=None,
+            visible_matries=None,
             token_type_ids=None,
             position_ids=None,
             head_mask=None,
@@ -95,10 +95,9 @@ class KBERT(BertModel):
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        if visible_matrix is not None:
-            extended_attention_mask: torch.Tensor = visible_matrix
-        else:
-            extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(attention_mask, input_shape, device)
+        if visible_matries is not None:
+            attention_mask = visible_matries
+        extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(attention_mask, input_shape, device)
 
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]
@@ -169,7 +168,7 @@ class KBertForSequenceClassification(BertPreTrainedModel):
         self,
         input_ids=None,
         attention_mask=None,
-        visible_matrix=None,
+        visible_matries=None,
         token_type_ids=None,
         position_ids=None,
         head_mask=None,
@@ -190,7 +189,7 @@ class KBertForSequenceClassification(BertPreTrainedModel):
         outputs = self.bert(
             input_ids,
             attention_mask=attention_mask,
-            visible_matrix=visible_matrix,
+            visible_matries=visible_matries,
             token_type_ids=token_type_ids,
             position_ids=position_ids,
             head_mask=head_mask,

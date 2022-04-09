@@ -4,6 +4,7 @@ import numpy as np
 import random
 import torch
 from torch.utils.data import Dataset
+from collections import defaultdict
 
 
 class CSQA2DatasetBase(Dataset):
@@ -14,7 +15,7 @@ class CSQA2DatasetBase(Dataset):
         with open(data_path, 'r') as f:
             for i, line in enumerate(f.readlines()):
                 example = json.loads(line)
-                example['label'] = 1 if example['question'] == "yes" else 0
+                example['label'] = 1 if example['answer'] == "yes" else 0
                 example['tokenized_question'] = tokenizer.tokenize(example['question'])
 
                 self.data[i] = example
@@ -77,16 +78,13 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
         self._create_lookup_table(knowledge_path)
     
     def _create_lookup_table(self, knowledge_path):
-        self.knowledge = dict()
+        self.knowledge = defaultdict(set)
 
         with open(knowledge_path, 'r', encoding='utf-8') as f:
             for line in f:
                 relation, start, end = [i.lower().replace('_', ' ') for i in line.strip().split("\t")]
                 value = "{} {}".format(relation, end)
-                try:
-                    self.knowledge[start].add(value)
-                except:
-                    self.knowledge[start] = {value}
+                self.knowledge[start].add(value)
 
     def collate_fn(self, batch):
         input_ids, position_ids, visible_matrices, labels = [], [], [], []
@@ -110,7 +108,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                         n += 1
                     
                     if n == len(tokenized_prompt):
-                        prompt_start = 1
+                        prompt_start = i
                         prompt_end = i + n - 1
                         break
             
@@ -118,7 +116,9 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
             remaining_len = len(example['tokenized_question'][prompt_end + 1:])
             entity_start = prompt_end + 2
             for i in range(entity_start):
-                visible_matrix[i][i] = 1
+                for j in range(entity_start):
+                    visible_matrix[i][j] = 1
+
                 position_id[i] = i
 
             curr_start = entity_start
@@ -136,24 +136,26 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                     for j in range(prompt_start + 1, entity_start):
                         # words within the prompt and entity can see each other
                         visible_matrix[curr_start + i][j] = 1
+                        visible_matrix[j][curr_start + i] = 1
 
                     for j in range(len(tokenized_entity)):
                         visible_matrix[curr_start + i][curr_start + j] = 1
-
                     position_id[curr_start + i] = entity_start + i   
 
                 input_tokens.extend(tokenized_entity)
                 curr_start += len(tokenized_entity)
 
-            input_tokens += example['tokenized_question'][prompt_end + 1:]
+            input_tokens += example['tokenized_question'][prompt_end + 1:] + [self.tokenizer.sep_token]
             for i in range(entity_start):
                 for j in range(curr_start, len(input_tokens) + 1):
                     visible_matrix[i][j] = 1
                     visible_matrix[j][i] = 1
-                    visible_matrix[j][j] = 1
-                    position_id[curr_start + j] = entity_start + j
+                    for k in range(curr_start, len(input_tokens) + 1):
+                        visible_matrix[j][k] = 1
+                    
+                    position_id[j] = entity_start + j - curr_start
             
-            input_id = self.tokenizer.convert_tokens_to_ids(input_tokens) + [self.tokenizer.sep_token_id]
+            input_id = self.tokenizer.convert_tokens_to_ids(input_tokens)
             input_id += [self.tokenizer.pad_token_id for _ in range(self.config['max_seq_length'] - len(input_id))]
 
             input_ids.append(input_id)

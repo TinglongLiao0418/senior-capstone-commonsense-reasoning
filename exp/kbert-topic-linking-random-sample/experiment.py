@@ -1,12 +1,12 @@
+import sys
+project_path = '/'.join(sys.path[0].split('/')[:sys.path[0].split('/').index('senior-capstone-commonsense-reasoning')+1])
+sys.path.insert(1, project_path)
 from transformers import AutoTokenizer, BertConfig, BertForSequenceClassification
 
 from src.dataset import CSQA2DatasetWithVisibleMatrix
 from src.trainer import run_experiment
 
 if __name__ == '__main__':
-    import sys
-    project_path = '/'.join(sys.path[0].split('/')[:sys.path[0].split('/').index('senior-capstone-commonsense-reasoning')+1])
-    sys.path.insert(1, project_path)
 
     config = {'max_seq_length': 512, 'max_entities': 10}
     model_config = BertConfig(num_labels=2)

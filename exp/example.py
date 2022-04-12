@@ -1,8 +1,9 @@
-from transformers import BertForSequenceClassification
 from transformers import AutoTokenizer
+from transformers import BertForSequenceClassification
 
 from src.dataset import CSQA2DatasetBase
 from src.trainer import run_experiment
+
 # from src.model import KBERT
 
 if __name__ == '__main__':

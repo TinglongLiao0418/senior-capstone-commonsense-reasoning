@@ -1,19 +1,16 @@
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from transformers import Trainer, TrainingArguments
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 
 def compute_metric(eval_pred):
     labels = eval_pred.label_ids
     preds = eval_pred.predictions.argmax(-1)
 
-    metrics = precision_recall_fscore_support(labels, preds, average='binary')
-    accuracy = accuracy_score(labels, preds)
-
     return {
-        'accuracy': accuracy,
-        'precision': metrics[0],
-        'recall': metrics[1],
-        'f1': metrics[2]
+        'accuracy': accuracy_score(labels, preds),
+        'precision': precision_score(labels, preds),
+        'recall': recall_score(labels, preds),
+        'f1': f1_score(labels, preds)
     }
 
 

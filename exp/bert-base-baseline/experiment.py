@@ -8,11 +8,11 @@ if __name__ == '__main__':
     model_config = BertConfig(num_labels=2)
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
     train_dataset = CSQA2DatasetBase(config=config,
-                                                  data_path="../../data/csqa2/train.json",
-                                                  tokenizer=tokenizer)
+                                     data_path="../../data/csqa2/train.json",
+                                     tokenizer=tokenizer)
     eval_dataset = CSQA2DatasetBase(config=config,
-                                                  data_path="../../data/csqa2/dev.json",
-                                                  tokenizer=tokenizer)
+                                    data_path="../../data/csqa2/dev.json",
+                                    tokenizer=tokenizer)
     model = BertForSequenceClassification.from_pretrained('bert-base-uncased')
     run_experiment(
         model=model,

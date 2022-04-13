@@ -97,7 +97,32 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
             entities = self.knowledge[example['topic_prompt']]
 
             if len(entities) > self.config['max_entities']:
-                entities = random.sample(entities, self.config['max_entities'])
+
+                if self.config['entity_sample'] == 'weighted':
+                    entities = list(entities)
+                    cum_weights = [0 for _ in entities]
+
+                    for i, e in enumerate(entities):
+                        tokenized_entity = self.tokenizer.tokenize(e)
+                        cum_weights[i] = sum([example['tokenized_question'].count(tokenized_e) for tokenized_e in tokenized_entity])
+
+                    if sum(cum_weights) > 0:
+                        cum_weights = [w + 1 for w in cum_weights]
+                        selected_entities = set()
+
+                        while (len(selected_entities) < self.config['max_entities']):
+                            idx = random.choices(range(len(entities)), cum_weights=cum_weights)[0]
+                            selected_entities.add(entities[idx])
+                            del entities[idx]
+                            del cum_weights[idx]
+                    
+                        entities = selected_entities
+
+                    else: 
+                        entities = random.sample(entities, self.config['max_entities'])
+
+                else:
+                    entities = random.sample(entities, self.config['max_entities'])
 
             # find the start and end of the topic prompt in the question
             prompt_start, prompt_end = -1, -1
@@ -147,10 +172,10 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
 
             input_tokens += example['tokenized_question'][prompt_end + 1:] + [self.tokenizer.sep_token]
             for i in range(entity_start):
-                for j in range(curr_start, len(input_tokens) + 1):
+                for j in range(curr_start, len(input_tokens)):
                     visible_matrix[i][j] = 1
                     visible_matrix[j][i] = 1
-                    for k in range(curr_start, len(input_tokens) + 1):
+                    for k in range(curr_start, len(input_tokens)):
                         visible_matrix[j][k] = 1
                     
                     position_id[j] = entity_start + j - curr_start

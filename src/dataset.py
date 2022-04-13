@@ -76,6 +76,9 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
     def __init__(self, config, data_path, tokenizer, knowledge_path):
         super(CSQA2DatasetWithVisibleMatrix, self).__init__(config, data_path, tokenizer)
         self._create_lookup_table(knowledge_path)
+        self.config = dict()
+        self.config['max_seq_length'] = 100
+        self.config['max_entities'] = 3
     
     def _create_lookup_table(self, knowledge_path):
         self.knowledge = defaultdict(set)
@@ -98,7 +101,10 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
 
             if len(entities) > self.config['max_entities']:
 
-                if self.config['entity_sample'] == 'weighted':
+                try:
+                    if self.config['entity_sample'] != 'weighted':
+                        raise ValueError('entity sample config not set correctly')
+
                     entities = list(entities)
                     cum_weights = [0 for _ in entities]
 
@@ -121,7 +127,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                     else: 
                         entities = random.sample(entities, self.config['max_entities'])
 
-                else:
+                except:
                     entities = random.sample(entities, self.config['max_entities'])
 
             # find the start and end of the topic prompt in the question
@@ -205,3 +211,5 @@ if __name__ == '__main__':
     dataset = CSQA2DatasetWithVisibleMatrix(config=config, tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
 
     print(dataset[0])
+    data = dataset[0]
+    dataset.collate_fn([data])

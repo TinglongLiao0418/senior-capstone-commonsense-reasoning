@@ -23,5 +23,5 @@ if __name__ == '__main__':
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         data_collator=train_dataset.collate_fn,
-        output_dir=".",
+        output_dir="log",
     )

@@ -8,24 +8,25 @@ from src.trainer import run_experiment
 
 if __name__ == '__main__':
 
-    config = {'max_seq_length': 512, 'max_entities': 20}
-    print(config)
-    model_config = BertConfig(num_labels=2)
+    max_entities = 20
+    print("MAX ENTITIES: " + max_entities)
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
-    train_dataset = CSQA2DatasetWithVisibleMatrix(config=config,
-                                                  data_path="../../data/csqa2/train.json",
+    train_dataset = CSQA2DatasetWithVisibleMatrix(data_path="../../data/csqa2/train.json",
                                                   tokenizer=tokenizer,
-                                                  knowledge_path="../../data/knowledge/conceptnet.csv")
-    eval_dataset = CSQA2DatasetWithVisibleMatrix(config=config,
-                                                  data_path="../../data/csqa2/dev.json",
-                                                  tokenizer=tokenizer,
-                                                  knowledge_path="../../data/knowledge/conceptnet.csv")
+                                                  knowledge_path="../../data/knowledge/conceptnet.csv",
+                                                  max_entities=max_entities,
+                                                  entity_sample='random')
+    eval_dataset = CSQA2DatasetWithVisibleMatrix(data_path="../../data/csqa2/dev.json",
+                                                 tokenizer=tokenizer,
+                                                 knowledge_path="../../data/knowledge/conceptnet.csv",
+                                                 max_entities=max_entities,
+                                                 entity_sample='random')
     model = BertForSequenceClassification.from_pretrained('bert-base-uncased')
     run_experiment(
         model=model,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         data_collator=train_dataset.collate_fn,
-        output_dir=".",
+        output_dir="log",
     )
 

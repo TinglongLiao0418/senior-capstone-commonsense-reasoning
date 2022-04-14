@@ -8,9 +8,9 @@ from collections import defaultdict
 
 
 class CSQA2DatasetBase(Dataset):
-    def __init__(self, config, data_path, tokenizer):
-        self.config = config
+    def __init__(self, data_path, tokenizer):
         self.tokenizer = tokenizer
+        self.max_seq_length = tokenizer.model_max_length
         self.data = {}
         with open(data_path, 'r') as f:
             for i, line in enumerate(f.readlines()):
@@ -31,7 +31,7 @@ class CSQA2DatasetBase(Dataset):
         input_ids, attention_masks, labels = [], [], []
         padding_length = min(
             max([len(example['tokenized_question']) + 2 for example in batch]),
-            self.config['max_seq_length']
+            self.max_seq_length
         )
 
 
@@ -52,33 +52,13 @@ class CSQA2DatasetBase(Dataset):
         }
 
 
-class CSQA2DatasetWithLink(CSQA2DatasetBase):
-    def __init__(self, config, data_path, tokenizer, knowledge_path):
-        super(CSQA2DatasetWithLink, self).__init__(config, data_path, tokenizer)
-        self.knowledge = pd.read_csv(knowledge_path, sep='\t', header=None)
-        self._link_topic_at_start()
-
-    def _link_topic_at_start(self):
-        r, s, e = 0, 1, 2
-        for example in self.data.values():
-
-            topic = example['topic_prompt']
-            links = []
-            for _, lnk in self.knowledge[self.knowledge[s] == topic].iterrows():
-                links.append({
-                    'relation': lnk[r],
-                    'start': lnk[s],
-                    'end': lnk[e]
-                })
-            example['links'] = links
 
 class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
-    def __init__(self, config, data_path, tokenizer, knowledge_path):
-        super(CSQA2DatasetWithVisibleMatrix, self).__init__(config, data_path, tokenizer)
+    def __init__(self, data_path, tokenizer, knowledge_path, max_entities=10, entity_sample='weighted'):
+        super(CSQA2DatasetWithVisibleMatrix, self).__init__(data_path, tokenizer)
+        self.max_entities = max_entities
+        self.entity_sample = entity_sample
         self._create_lookup_table(knowledge_path)
-        self.config = dict()
-        self.config['max_seq_length'] = 100
-        self.config['max_entities'] = 3
     
     def _create_lookup_table(self, knowledge_path):
         self.knowledge = defaultdict(set)
@@ -93,16 +73,16 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
         input_ids, position_ids, visible_matrices, labels = [], [], [], []
 
         for example in batch:
-            visible_matrix = np.zeros((self.config['max_seq_length'], self.config['max_seq_length']), dtype=int)
-            position_id = np.zeros(self.config['max_seq_length'], dtype=int)
+            visible_matrix = np.zeros((self.max_seq_length, self.max_seq_length), dtype=int)
+            position_id = np.zeros(self.max_seq_length, dtype=int)
 
             tokenized_prompt = self.tokenizer.tokenize(example['topic_prompt'])
             entities = self.knowledge[example['topic_prompt']]
 
-            if len(entities) > self.config['max_entities']:
+            if len(entities) > self.max_entities:
 
                 try:
-                    if self.config['entity_sample'] != 'weighted':
+                    if self.entity_sample != 'weighted':
                         raise ValueError('entity sample config not set correctly')
 
                     entities = list(entities)
@@ -116,7 +96,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                         cum_weights = [w + 1 for w in cum_weights]
                         selected_entities = set()
 
-                        while (len(selected_entities) < self.config['max_entities']):
+                        while (len(selected_entities) < self.max_entities):
                             idx = random.choices(range(len(entities)), cum_weights=cum_weights)[0]
                             selected_entities.add(entities[idx])
                             del entities[idx]
@@ -125,10 +105,10 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                         entities = selected_entities
 
                     else: 
-                        entities = random.sample(entities, self.config['max_entities'])
+                        entities = random.sample(entities, self.max_entities)
 
                 except:
-                    entities = random.sample(entities, self.config['max_entities'])
+                    entities = random.sample(entities, self.max_entities)
 
             # find the start and end of the topic prompt in the question
             prompt_start, prompt_end = -1, -1
@@ -157,7 +137,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                 tokenized_entity = self.tokenizer.tokenize(e)
                 if (
                         prompt_end < 0 or 
-                        len(input_tokens) + len(tokenized_entity) + remaining_len >= self.config['max_seq_length']
+                        len(input_tokens) + len(tokenized_entity) + remaining_len >= self.max_seq_length
                     ):
                     # if not finding the prompt within the question
                     # or adding the entity makes the seq exceed max_seq_length
@@ -187,7 +167,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                     position_id[j] = entity_start + j - curr_start
             
             input_id = self.tokenizer.convert_tokens_to_ids(input_tokens)
-            input_id += [self.tokenizer.pad_token_id for _ in range(self.config['max_seq_length'] - len(input_id))]
+            input_id += [self.tokenizer.pad_token_id for _ in range(self.max_seq_length - len(input_id))]
 
             input_ids.append(input_id)
             position_ids.append(position_id)
@@ -203,13 +183,16 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
 
 
 if __name__ == '__main__':
-    from transformers import AutoConfig, AutoTokenizer
-    config = AutoConfig.from_pretrained('bert-base-uncased')
+    from transformers import AutoTokenizer
+    from torch.utils.data import DataLoader
+
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
     datapath = '../data/csqa2/dev.json'
     knowledgepath = '../data/knowledge/conceptnet.csv'
-    dataset = CSQA2DatasetWithVisibleMatrix(config=config, tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
+    dataset = CSQA2DatasetWithVisibleMatrix(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
 
-    print(dataset[0])
-    data = dataset[0]
-    dataset.collate_fn([data])
+    dataloader = DataLoader(dataset=dataset, collate_fn=dataset.collate_fn, batch_size=4)
+
+    for i in dataloader:
+        print(i)
+        break

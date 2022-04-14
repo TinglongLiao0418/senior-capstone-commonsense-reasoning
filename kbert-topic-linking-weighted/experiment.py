@@ -8,7 +8,7 @@ from src.trainer import run_experiment
 
 if __name__ == '__main__':
 
-    config = {'max_seq_length': 512, 'max_entities': 20, 'entity_sample': 'weighted'}
+    config = {'max_seq_length': 512, 'max_entities': 80}
     print(config)
     model_config = BertConfig(num_labels=2)
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=kbert
+#SBATCH --job-name=kbert-weighted
 #SBATCH --open-mode=append
 #SBATCH --output=log/%j_%x.out
 #SBATCH --error=log/%j_%x.err

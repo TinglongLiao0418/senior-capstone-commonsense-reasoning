@@ -9,7 +9,7 @@ from src.trainer import run_experiment
 if __name__ == '__main__':
 
     max_entities = 20
-    print("MAX ENTITIES: " + max_entities)
+    print("MAX ENTITIES: " + str(max_entities))
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
     train_dataset = CSQA2DatasetWithVisibleMatrix(data_path="../../data/csqa2/train.json",
                                                   tokenizer=tokenizer,

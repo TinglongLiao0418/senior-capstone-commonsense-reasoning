@@ -344,7 +344,8 @@ class CorruptedConceptNet(Dataset):
 
         target_encoding = self.tokenizer(
             [example["answer"] for example in batch],
-            padding="longest"
+            padding="longest",
+            return_tensors="pt"
         )
         labels = target_encoding.input_ids
 

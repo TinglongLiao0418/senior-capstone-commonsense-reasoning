@@ -335,14 +335,14 @@ class CorruptedConceptNet(Dataset):
 
             example["context"] = context
 
-        encoding = tokenizer(
+        encoding = self.tokenizer(
             ["statement: " + example['statement'] + "context" + example['context'] for example in batch],
             padding="longest",
             return_tensors="pt",
         )
         input_ids, attention_mask = encoding.input_ids, encoding.attention_mask
 
-        target_encoding = tokenizer(
+        target_encoding = self.tokenizer(
             [example["answer"] for example in batch],
             padding="longest"
         )

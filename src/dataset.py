@@ -237,9 +237,9 @@ class CSQA2DatasetWithVisibleMatrixForT5(CSQA2DatasetWithVisibleMatrix):
 
                 input_id = torch.cat((input_id, tokenized_entity))
 
-            padded_attention_mask = torch.zeros(self.max_seq_length, self.max_seq_length)
+            padded_attention_mask = torch.zeros(self.max_seq_length, self.max_seq_length, dtype=torch.long)
             padded_attention_mask[:expanded_attention_mask.size(0), :expanded_attention_mask.size(0)] = expanded_attention_mask
-            padded_input_ids = torch.ones(self.max_seq_length) * self.tokenizer.pad_token_id
+            padded_input_ids = torch.ones(self.max_seq_length, dtype=torch.long) * self.tokenizer.pad_token_id
             padded_input_ids[:input_id.size(0)] = input_id
 
             label = torch.LongTensor(self.tokenizer(example['answer']).input_ids)
@@ -268,5 +268,5 @@ if __name__ == '__main__':
     dataloader = DataLoader(dataset=dataset, collate_fn=dataset.collate_fn, batch_size=4)
 
     for i in tqdm(dataloader):
-        print(i['input_ids'].shape)
+        print(i)
         break

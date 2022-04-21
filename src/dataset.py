@@ -20,7 +20,6 @@ class CSQA2DatasetBase(Dataset):
 
                 self.data[i] = example
 
-
     def __len__(self):
         return len(self.data)
 
@@ -255,6 +254,107 @@ class CSQA2DatasetWithVisibleMatrixForT5(CSQA2DatasetWithVisibleMatrix):
         }
 
 
+class CorruptedConceptNet(Dataset):
+    def __init__(self, path, tokenizer, max_context_num=10, corrupt_ratio=0.5):
+        self._read_conceptnet(path)
+        self.tokenizer = tokenizer
+        self.max_context_num = max_context_num
+        self.corrupt_ratio = corrupt_ratio
+
+        self._corrupt_data()
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, item):
+        return self.data[item]
+
+    def _read_conceptnet(self, path):
+        self.data = []
+        self.entity_pool = set()
+        self.relation_pool = set()
+        self.knowledge = defaultdict(lambda : defaultdict(set))
+        self.entity_to_all_relations = defaultdict(list)
+
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                relation, start, end = [i.lower().replace('_', ' ') for i in line.strip().split("\t")]
+
+                example = {
+                    'start': start,
+                    'relation': relation,
+                    'end': end
+                }
+                self.data.append(example)
+
+                self.entity_pool.add(start)
+                self.entity_pool.add(end)
+                self.relation_pool.add(relation)
+                self.knowledge[start][relation].add(end)
+                self.entity_to_all_relations['start'].append(' '.join([start, relation, end]))
+
+        self.entity_pool = list(self.entity_pool)
+        self.relation_pool = list(self.relation_pool)
+
+    def _corrupt_data(self):
+        for example in self.data:
+
+            if random.random() < self.corrupt_ratio:
+                if random.random() < 0.5:
+                    while True:
+                        e = random.choice(self.entity_pool)
+                        if e not in self.knowledge[example['start']][example['relation']]:
+                            example['end'] = e
+                            break
+                else:
+                    while True:
+                        r = random.choice(self.relation_pool)
+                        if example['end'] not in self.knowledge[example['start']][r]:
+                            example['r'] = r
+                            break
+                example['answer'] = "no"
+            else:
+                example['answer'] = "yes"
+
+    def collate_fn(self, batch):
+        for example in batch:
+            example["statement"] = ' '.join([example["start"], example["relation"], example["end"]]) + "."
+
+            context = []
+            choices = self.entity_to_all_relations['example_start']
+            random.shuffle(choices)
+            i = 0
+            for c in choices:
+                if i > self.max_context_num:
+                    break
+                if c == example["statement"]:
+                    continue
+                else:
+                    context.append(c + ".")
+            context = ' '.join(context)
+
+            example["context"] = context
+
+        encoding = tokenizer(
+            ["statement: " + example['statement'] + "context" + example['context'] for example in batch],
+            padding="longest",
+            return_tensors="pt",
+        )
+        input_ids, attention_mask = encoding.input_ids, encoding.attention_mask
+
+        target_encoding = tokenizer(
+            [example["answer"] for example in batch],
+            padding="longest"
+        )
+        labels = target_encoding.input_ids
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels
+        }
+
+
 if __name__ == '__main__':
     from transformers import AutoTokenizer
     from torch.utils.data import DataLoader
@@ -263,10 +363,9 @@ if __name__ == '__main__':
     tokenizer = AutoTokenizer.from_pretrained('t5-small')
     datapath = '../data/csqa2/dev.json'
     knowledgepath = '../data/knowledge/conceptnet.csv'
-    dataset = CSQA2DatasetWithVisibleMatrixForT5(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
-
+    # dataset = CSQA2DatasetWithVisibleMatrixForT5(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
+    dataset = CorruptedConceptNet(tokenizer=tokenizer, path=knowledgepath)
     dataloader = DataLoader(dataset=dataset, collate_fn=dataset.collate_fn, batch_size=4)
 
     for i in tqdm(dataloader):
-        print(i)
-        break
+        pass

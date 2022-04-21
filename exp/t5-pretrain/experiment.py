@@ -22,7 +22,7 @@ if __name__ == '__main__':
         per_device_eval_batch_size=8,
         gradient_accumulation_steps=1,
         data_collator=train_dataset.collate_fn,
-        output_dir="log",
+        output_dir="log/pretrain",
         learning_rate=1e-4
     )
 

@@ -16,16 +16,19 @@ def compute_metric(eval_pred):
 
 def run_experiment(model, train_dataset, eval_dataset, data_collator, output_dir='log', learning_rate=5e-6,
                    per_device_train_batch_size=8, per_device_eval_batch_size=8, gradient_accumulation_steps=1,
+                   evaluation_strategy='epoch', eval_steps=2e4, save_strategy='epoch', save_steps=2e4,
                    epoch=5, seed=42):
     train_args = TrainingArguments(
         output_dir=output_dir,
         learning_rate=learning_rate,
-        evaluation_strategy='epoch',
+        evaluation_strategy=evaluation_strategy,
+        eval_steps=eval_steps,
+        save_strategy=save_strategy,
+        save_steps=save_steps,
         per_device_train_batch_size=per_device_train_batch_size,
         per_device_eval_batch_size=per_device_eval_batch_size,
         gradient_accumulation_steps=gradient_accumulation_steps,
         num_train_epochs=epoch,
-        save_strategy='epoch',
         seed=seed
     )
 

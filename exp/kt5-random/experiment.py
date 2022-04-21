@@ -8,7 +8,7 @@ from src.trainer import run_experiment
 
 if __name__ == '__main__':
 
-    config = {'model': 't5-3b', 'max_seq_length': 512, 'max_entities': 40}
+    config = {'model': 't5-large', 'max_seq_length': 512, 'max_entities': 40}
     print(config)
     tokenizer = T5Tokenizer.from_pretrained(config['model'])
     train_dataset = CSQA2DatasetWithVisibleMatrixForT5(data_path="../../data/csqa2/train.json",

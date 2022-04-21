@@ -198,7 +198,6 @@ class CSQA2DatasetWithVisibleMatrixForT5(CSQA2DatasetWithVisibleMatrix):
             attention_mask = self.tokenizer(question, return_tensors='pt').attention_mask.squeeze()
             # expand the attention to 2D
             expanded_attention_mask = attention_mask.unsqueeze(0).repeat(attention_mask.size(0), 1)
-            entities = random.sample(self.knowledge[example['topic_prompt']], self.max_entities)
 
             # find the prompt span
             prompt_start, prompt_end = -1, -1
@@ -217,12 +216,15 @@ class CSQA2DatasetWithVisibleMatrixForT5(CSQA2DatasetWithVisibleMatrix):
                         i += 1
                         j += 1
 
-            for e in entities:
-                if prompt_start == -1:
-                    break
+            if prompt_start == -1:
+                entities = []
+            else:
+                num_entity = min(self.max_entities, len(self.knowledge[example['topic_prompt']]))
+                entities = random.sample(self.knowledge[example['topic_prompt']], num_entity)
 
+            for e in entities:
                 tokenized_entity = torch.LongTensor(self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(e)))
-                if tokenized_entity.size(0) + input_id.size(0) > self.max_seq_length - 5: # Make room for decoder
+                if tokenized_entity.size(0) + input_id.size(0) > self.max_seq_length - 5:  # Make room for decoder
                     break
 
                 new_attention_block_upper_right = torch.zeros(input_id.size(0), tokenized_entity.size(0))
@@ -256,6 +258,7 @@ class CSQA2DatasetWithVisibleMatrixForT5(CSQA2DatasetWithVisibleMatrix):
 if __name__ == '__main__':
     from transformers import AutoTokenizer
     from torch.utils.data import DataLoader
+    from tqdm import tqdm
 
     tokenizer = AutoTokenizer.from_pretrained('t5-small')
     datapath = '../data/csqa2/dev.json'
@@ -264,6 +267,6 @@ if __name__ == '__main__':
 
     dataloader = DataLoader(dataset=dataset, collate_fn=dataset.collate_fn, batch_size=4)
 
-    for i in dataloader:
-        print(i)
+    for i in tqdm(dataloader):
+        print(i['input_ids'].shape)
         break

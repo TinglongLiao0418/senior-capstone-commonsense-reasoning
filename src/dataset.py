@@ -182,14 +182,85 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
         }
 
 
+class CSQA2DatasetWithVisibleMatrixForT5(CSQA2DatasetWithVisibleMatrix):
+    def __init__(self, data_path, tokenizer, knowledge_path, max_entities=10, entity_sample='weighted'):
+        super(CSQA2DatasetWithVisibleMatrixForT5, self).__init__(data_path, tokenizer, knowledge_path, max_entities, entity_sample)
+
+
+    def collate_fn(self, batch):
+        input_ids = []
+        attention_masks = []
+        labels = []
+
+        for example in batch:
+            question = "Question: " + example['question']
+            input_id = self.tokenizer(question, return_tensors='pt').input_ids.squeeze()
+            attention_mask = self.tokenizer(question, return_tensors='pt').attention_mask.squeeze()
+            # expand the attention to 2D
+            expanded_attention_mask = attention_mask.unsqueeze(0).repeat(attention_mask.size(0), 1)
+            entities = random.sample(self.knowledge[example['topic_prompt']], self.max_entities)
+
+            # find the prompt span
+            prompt_start, prompt_end = -1, -1
+            tokenized_prompt = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(example['topic_prompt']))
+            i, j = 0, 0
+            while i < input_id.size(0):
+
+                if input_id[i].item() != tokenized_prompt[j]:
+                    i += 1
+                    j = 0
+                else:
+                    if j == len(tokenized_prompt) - 1:
+                        prompt_start, prompt_end = j - len(tokenized_prompt) + 1, j + 1
+                        break
+                    else:
+                        i += 1
+                        j += 1
+
+            for e in entities:
+                if prompt_start == -1:
+                    break
+
+                tokenized_entity = torch.LongTensor(self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(e)))
+                if tokenized_entity.size(0) + input_id.size(0) > self.max_seq_length - 5: # Make room for decoder
+                    break
+
+                new_attention_block_upper_right = torch.zeros(input_id.size(0), tokenized_entity.size(0))
+                new_attention_block_upper_right[:, prompt_start: prompt_end] = 1
+                new_attention_block_lower_left = torch.permute(new_attention_block_upper_right, (1, 0))
+                new_attention_block_lower_right = torch.ones(tokenized_entity.size(0), tokenized_entity.size(0))
+                new_attention_block_lower = torch.cat((new_attention_block_lower_left, new_attention_block_lower_right), 1)
+                expanded_attention_mask = torch.cat((expanded_attention_mask, new_attention_block_upper_right), 1)
+                expanded_attention_mask = torch.cat((expanded_attention_mask, new_attention_block_lower), 0)
+
+                input_id = torch.cat((input_id, tokenized_entity))
+
+            padded_attention_mask = torch.zeros(self.max_seq_length, self.max_seq_length)
+            padded_attention_mask[:expanded_attention_mask.size(0), :expanded_attention_mask.size(0)] = expanded_attention_mask
+            padded_input_ids = torch.ones(self.max_seq_length) * self.tokenizer.pad_token_id
+            padded_input_ids[:input_id.size(0)] = input_id
+
+            label = torch.LongTensor(self.tokenizer(example['answer']).input_ids)
+
+            input_ids.append(padded_input_ids)
+            labels.append(label)
+            attention_masks.append(padded_attention_mask)
+
+        return {
+            'input_ids': torch.stack(input_ids),
+            'attention_mask': torch.stack(attention_masks),
+            'labels': torch.stack(labels)
+        }
+
+
 if __name__ == '__main__':
     from transformers import AutoTokenizer
     from torch.utils.data import DataLoader
 
-    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+    tokenizer = AutoTokenizer.from_pretrained('t5-small')
     datapath = '../data/csqa2/dev.json'
     knowledgepath = '../data/knowledge/conceptnet.csv'
-    dataset = CSQA2DatasetWithVisibleMatrix(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
+    dataset = CSQA2DatasetWithVisibleMatrixForT5(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
 
     dataloader = DataLoader(dataset=dataset, collate_fn=dataset.collate_fn, batch_size=4)
 

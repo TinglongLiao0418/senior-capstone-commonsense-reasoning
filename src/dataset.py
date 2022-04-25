@@ -8,9 +8,9 @@ from collections import defaultdict
 
 
 class CSQA2DatasetBase(Dataset):
-    def __init__(self, config, data_path, tokenizer):
-        self.config = config
+    def __init__(self, data_path, tokenizer):
         self.tokenizer = tokenizer
+        self.max_seq_length = tokenizer.model_max_length
         self.data = {}
         with open(data_path, 'r') as f:
             for i, line in enumerate(f.readlines()):
@@ -19,7 +19,6 @@ class CSQA2DatasetBase(Dataset):
                 example['tokenized_question'] = tokenizer.tokenize(example['question'])
 
                 self.data[i] = example
-
 
     def __len__(self):
         return len(self.data)
@@ -31,7 +30,7 @@ class CSQA2DatasetBase(Dataset):
         input_ids, attention_masks, labels = [], [], []
         padding_length = min(
             max([len(example['tokenized_question']) + 2 for example in batch]),
-            self.config['max_seq_length']
+            self.max_seq_length
         )
 
 
@@ -52,33 +51,13 @@ class CSQA2DatasetBase(Dataset):
         }
 
 
-class CSQA2DatasetWithLink(CSQA2DatasetBase):
-    def __init__(self, config, data_path, tokenizer, knowledge_path):
-        super(CSQA2DatasetWithLink, self).__init__(config, data_path, tokenizer)
-        self.knowledge = pd.read_csv(knowledge_path, sep='\t', header=None)
-        self._link_topic_at_start()
-
-    def _link_topic_at_start(self):
-        r, s, e = 0, 1, 2
-        for example in self.data.values():
-
-            topic = example['topic_prompt']
-            links = []
-            for _, lnk in self.knowledge[self.knowledge[s] == topic].iterrows():
-                links.append({
-                    'relation': lnk[r],
-                    'start': lnk[s],
-                    'end': lnk[e]
-                })
-            example['links'] = links
 
 class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
-    def __init__(self, config, data_path, tokenizer, knowledge_path):
-        super(CSQA2DatasetWithVisibleMatrix, self).__init__(config, data_path, tokenizer)
+    def __init__(self, data_path, tokenizer, knowledge_path, max_entities=10, entity_sample='weighted'):
+        super(CSQA2DatasetWithVisibleMatrix, self).__init__(data_path, tokenizer)
+        self.max_entities = max_entities
+        self.entity_sample = entity_sample
         self._create_lookup_table(knowledge_path)
-        self.config = dict()
-        self.config['max_seq_length'] = 100
-        self.config['max_entities'] = 3
     
     def _create_lookup_table(self, knowledge_path):
         self.knowledge = defaultdict(set)
@@ -132,16 +111,16 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
         input_ids, position_ids, visible_matrices, labels = [], [], [], []
 
         for example in batch:
-            visible_matrix = np.zeros((self.config['max_seq_length'], self.config['max_seq_length']), dtype=int)
-            position_id = np.zeros(self.config['max_seq_length'], dtype=int)
+            visible_matrix = np.zeros((self.max_seq_length, self.max_seq_length), dtype=int)
+            position_id = np.zeros(self.max_seq_length, dtype=int)
 
             tokenized_prompt = self.tokenizer.tokenize(example['topic_prompt'])
             entities = self.knowledge[example['topic_prompt']]
 
-            if len(entities) > self.config['max_entities']:
+            if len(entities) > self.max_entities:
 
                 try:
-                    if self.config['entity_sample'] != 'weighted':
+                    if self.entity_sample != 'weighted':
                         raise ValueError('entity sample config not set correctly')
 
                     entities = list(entities)
@@ -155,7 +134,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                         cum_weights = [w + 1 for w in cum_weights]
                         selected_entities = set()
 
-                        while (len(selected_entities) < self.config['max_entities']):
+                        while (len(selected_entities) < self.max_entities):
                             idx = random.choices(range(len(entities)), cum_weights=cum_weights)[0]
                             selected_entities.add(entities[idx])
                             del entities[idx]
@@ -164,10 +143,10 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                         entities = selected_entities
 
                     else: 
-                        entities = random.sample(entities, self.config['max_entities'])
+                        entities = random.sample(entities, self.max_entities)
 
                 except:
-                    entities = random.sample(entities, self.config['max_entities'])
+                    entities = random.sample(entities, self.max_entities)
 
             # find the start and end of the topic prompt in the question
             prompt_start, prompt_end = -1, -1
@@ -196,7 +175,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                 tokenized_entity = self.tokenizer.tokenize(e)
                 if (
                         prompt_end < 0 or 
-                        len(input_tokens) + len(tokenized_entity) + remaining_len >= self.config['max_seq_length']
+                        len(input_tokens) + len(tokenized_entity) + remaining_len >= self.max_seq_length
                     ):
                     # if not finding the prompt within the question
                     # or adding the entity makes the seq exceed max_seq_length
@@ -226,7 +205,7 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
                     position_id[j] = entity_start + j - curr_start
             
             input_id = self.tokenizer.convert_tokens_to_ids(input_tokens)
-            input_id += [self.tokenizer.pad_token_id for _ in range(self.config['max_seq_length'] - len(input_id))]
+            input_id += [self.tokenizer.pad_token_id for _ in range(self.max_seq_length - len(input_id))]
 
             input_ids.append(input_id)
             position_ids.append(position_id)
@@ -241,14 +220,193 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
         }
 
 
+class CSQA2DatasetWithVisibleMatrixForT5(CSQA2DatasetWithVisibleMatrix):
+    def __init__(self, data_path, tokenizer, knowledge_path, max_entities=10, entity_sample='weighted'):
+        super(CSQA2DatasetWithVisibleMatrixForT5, self).__init__(data_path, tokenizer, knowledge_path, max_entities, entity_sample)
+
+
+    def collate_fn(self, batch):
+        input_ids = []
+        attention_masks = []
+        labels = []
+
+        for example in batch:
+            question = "Question: " + example['question']
+            input_id = self.tokenizer(question, return_tensors='pt').input_ids.squeeze()
+            attention_mask = self.tokenizer(question, return_tensors='pt').attention_mask.squeeze()
+            # expand the attention to 2D
+            expanded_attention_mask = attention_mask.unsqueeze(0).repeat(attention_mask.size(0), 1)
+
+            # find the prompt span
+            prompt_start, prompt_end = -1, -1
+            tokenized_prompt = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(example['topic_prompt']))
+            i, j = 0, 0
+            while i < input_id.size(0):
+
+                if input_id[i].item() != tokenized_prompt[j]:
+                    i += 1
+                    j = 0
+                else:
+                    if j == len(tokenized_prompt) - 1:
+                        prompt_start, prompt_end = j - len(tokenized_prompt) + 1, j + 1
+                        break
+                    else:
+                        i += 1
+                        j += 1
+
+            if prompt_start == -1:
+                entities = []
+            else:
+                num_entity = min(self.max_entities, len(self.knowledge[example['topic_prompt']]))
+                entities = random.sample(self.knowledge[example['topic_prompt']], num_entity)
+
+            for e in entities:
+                tokenized_entity = torch.LongTensor(self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(e)))
+                if tokenized_entity.size(0) + input_id.size(0) > self.max_seq_length - 5:  # Make room for decoder
+                    break
+
+                new_attention_block_upper_right = torch.zeros(input_id.size(0), tokenized_entity.size(0))
+                new_attention_block_upper_right[:, prompt_start: prompt_end] = 1
+                new_attention_block_lower_left = torch.permute(new_attention_block_upper_right, (1, 0))
+                new_attention_block_lower_right = torch.ones(tokenized_entity.size(0), tokenized_entity.size(0))
+                new_attention_block_lower = torch.cat((new_attention_block_lower_left, new_attention_block_lower_right), 1)
+                expanded_attention_mask = torch.cat((expanded_attention_mask, new_attention_block_upper_right), 1)
+                expanded_attention_mask = torch.cat((expanded_attention_mask, new_attention_block_lower), 0)
+
+                input_id = torch.cat((input_id, tokenized_entity))
+
+            padded_attention_mask = torch.zeros(self.max_seq_length, self.max_seq_length, dtype=torch.long)
+            padded_attention_mask[:expanded_attention_mask.size(0), :expanded_attention_mask.size(0)] = expanded_attention_mask
+            padded_input_ids = torch.ones(self.max_seq_length, dtype=torch.long) * self.tokenizer.pad_token_id
+            padded_input_ids[:input_id.size(0)] = input_id
+
+            label = torch.LongTensor(self.tokenizer(example['answer']).input_ids)
+
+            input_ids.append(padded_input_ids)
+            labels.append(label)
+            attention_masks.append(padded_attention_mask)
+
+        return {
+            'input_ids': torch.stack(input_ids),
+            'attention_mask': torch.stack(attention_masks),
+            'labels': torch.stack(labels)
+        }
+
+
+class CorruptedConceptNet(Dataset):
+    def __init__(self, path, tokenizer, max_context_num=10, corrupt_ratio=0.5):
+        self._read_conceptnet(path)
+        self.tokenizer = tokenizer
+        self.max_context_num = max_context_num
+        self.corrupt_ratio = corrupt_ratio
+
+        self._corrupt_data()
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, item):
+        return self.data[item]
+
+    def _read_conceptnet(self, path):
+        self.data = []
+        self.entity_pool = set()
+        self.relation_pool = set()
+        self.knowledge = defaultdict(lambda : defaultdict(set))
+        self.entity_to_all_relations = defaultdict(list)
+
+        with open(path, 'r', encoding='utf-8') as f:
+            for line in f:
+                relation, start, end = [i.lower().replace('_', ' ') for i in line.strip().split("\t")]
+
+                example = {
+                    'start': start,
+                    'relation': relation,
+                    'end': end
+                }
+                self.data.append(example)
+
+                self.entity_pool.add(start)
+                self.entity_pool.add(end)
+                self.relation_pool.add(relation)
+                self.knowledge[start][relation].add(end)
+                self.entity_to_all_relations['start'].append(' '.join([start, relation, end]))
+
+        self.entity_pool = list(self.entity_pool)
+        self.relation_pool = list(self.relation_pool)
+
+    def _corrupt_data(self):
+        for example in self.data:
+
+            if random.random() < self.corrupt_ratio:
+                if random.random() < 0.5:
+                    while True:
+                        e = random.choice(self.entity_pool)
+                        if e not in self.knowledge[example['start']][example['relation']]:
+                            example['end'] = e
+                            break
+                else:
+                    while True:
+                        r = random.choice(self.relation_pool)
+                        if example['end'] not in self.knowledge[example['start']][r]:
+                            example['r'] = r
+                            break
+                example['answer'] = "no"
+            else:
+                example['answer'] = "yes"
+
+    def collate_fn(self, batch):
+        for example in batch:
+            example["statement"] = ' '.join([example["start"], example["relation"], example["end"]]) + "."
+
+            context = []
+            choices = self.entity_to_all_relations['example_start']
+            random.shuffle(choices)
+            i = 0
+            for c in choices:
+                if i > self.max_context_num:
+                    break
+                if c == example["statement"]:
+                    continue
+                else:
+                    context.append(c + ".")
+            context = ' '.join(context)
+
+            example["context"] = context
+
+        encoding = self.tokenizer(
+            ["statement: " + example['statement'] + "context: " + example['context'] for example in batch],
+            padding="longest",
+            return_tensors="pt",
+        )
+        input_ids, attention_mask = encoding.input_ids, encoding.attention_mask
+
+        target_encoding = self.tokenizer(
+            [example["answer"] for example in batch],
+            padding="longest",
+            return_tensors="pt"
+        )
+        labels = target_encoding.input_ids
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels
+        }
+
+
 if __name__ == '__main__':
-    from transformers import AutoConfig, AutoTokenizer
-    config = AutoConfig.from_pretrained('bert-base-uncased')
-    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+    from transformers import AutoTokenizer
+    from torch.utils.data import DataLoader
+    from tqdm import tqdm
+
+    tokenizer = AutoTokenizer.from_pretrained('t5-small')
     datapath = '../data/csqa2/dev.json'
     knowledgepath = '../data/knowledge/conceptnet.csv'
-    dataset = CSQA2DatasetWithVisibleMatrix(config=config, tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
+    # dataset = CSQA2DatasetWithVisibleMatrixForT5(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
+    dataset = CorruptedConceptNet(tokenizer=tokenizer, path=knowledgepath)
+    print(len(dataset))
+    dataloader = DataLoader(dataset=dataset, collate_fn=dataset.collate_fn, batch_size=4)
 
-    print(dataset[0])
-    data = dataset[0]
-    dataset.collate_fn([data])
+    for i in tqdm(dataloader):
+        pass

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=kbert
+#SBATCH --job-name=kt5
 #SBATCH --open-mode=append
 #SBATCH --output=log/%j_%x.out
 #SBATCH --error=log/%j_%x.err
@@ -13,6 +13,6 @@
 
 singularity exec --nv --bind /scratch/tl2564 --overlay /scratch/tl2564/overlay-25GB-500K.ext3:ro /scratch/tl2564/cuda11.4.2-cudnn8.2.4-devel-ubuntu20.04.3.sif /bin/bash -c "
 source /ext3/env.sh
-cd /scratch/tl2564/senior-capstone-commonsense-reasoning/exp/kbert-topic-linking-random-sample-base
+cd /scratch/tl2564/senior-capstone-commonsense-reasoning/exp/kt5-random
 python experiment.py
 "

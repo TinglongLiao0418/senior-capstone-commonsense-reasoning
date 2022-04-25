@@ -1,0 +1,18 @@
+MAX ENTITIES: 40
+{'loss': 0.6973, 'learning_rate': 4.568221070811745e-06, 'epoch': 0.43}
+{'loss': 0.6909, 'learning_rate': 4.136442141623489e-06, 'epoch': 0.86}
+{'eval_loss': 0.6850123405456543, 'eval_accuracy': 0.5710350255804801, 'eval_precision': 0.5450300200133422, 'eval_recall': 0.6669387755102041, 'eval_f1': 0.5998531571218796, 'eval_runtime': 89.9367, 'eval_samples_per_second': 28.253, 'eval_steps_per_second': 3.536, 'epoch': 1.0}
+{'loss': 0.6763, 'learning_rate': 3.7046632124352333e-06, 'epoch': 1.3}
+{'loss': 0.6704, 'learning_rate': 3.2728842832469777e-06, 'epoch': 1.73}
+{'eval_loss': 0.6976995468139648, 'eval_accuracy': 0.5458480913026368, 'eval_precision': 0.5278868813825609, 'eval_recall': 0.5485714285714286, 'eval_f1': 0.5380304243394716, 'eval_runtime': 89.2769, 'eval_samples_per_second': 28.462, 'eval_steps_per_second': 3.562, 'epoch': 2.0}
+{'loss': 0.6485, 'learning_rate': 2.8411053540587218e-06, 'epoch': 2.16}
+{'loss': 0.6259, 'learning_rate': 2.4093264248704666e-06, 'epoch': 2.59}
+{'eval_loss': 0.7446733713150024, 'eval_accuracy': 0.538370720188902, 'eval_precision': 0.5191740412979351, 'eval_recall': 0.5746938775510204, 'eval_f1': 0.5455249903138318, 'eval_runtime': 88.5783, 'eval_samples_per_second': 28.686, 'eval_steps_per_second': 3.59, 'epoch': 3.0}
+{'loss': 0.6177, 'learning_rate': 1.9775474956822106e-06, 'epoch': 3.02}
+{'loss': 0.5715, 'learning_rate': 1.5457685664939553e-06, 'epoch': 3.45}
+{'loss': 0.5678, 'learning_rate': 1.1139896373056995e-06, 'epoch': 3.89}
+{'eval_loss': 0.797827422618866, 'eval_accuracy': 0.5470287288469107, 'eval_precision': 0.5260196905766527, 'eval_recall': 0.6106122448979592, 'eval_f1': 0.5651681148469966, 'eval_runtime': 88.8878, 'eval_samples_per_second': 28.587, 'eval_steps_per_second': 3.578, 'epoch': 4.0}
+{'loss': 0.5428, 'learning_rate': 6.82210708117444e-07, 'epoch': 4.32}
+{'loss': 0.5157, 'learning_rate': 2.5043177892918825e-07, 'epoch': 4.75}
+{'eval_loss': 0.8244158029556274, 'eval_accuracy': 0.5426997245179064, 'eval_precision': 0.5218902015288395, 'eval_recall': 0.6130612244897959, 'eval_f1': 0.5638138138138138, 'eval_runtime': 88.6269, 'eval_samples_per_second': 28.671, 'eval_steps_per_second': 3.588, 'epoch': 5.0}
+{'train_runtime': 3049.398, 'train_samples_per_second': 15.19, 'train_steps_per_second': 1.899, 'train_loss': 0.6161301792388547, 'epoch': 5.0}

@@ -7,7 +7,6 @@ from src.dataset import CSQA2DatasetWithVisibleMatrix
 from src.trainer import run_experiment
 
 if __name__ == '__main__':
-
     max_entities = 20
     print("MAX ENTITIES: " + str(max_entities))
     tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
@@ -15,12 +14,12 @@ if __name__ == '__main__':
                                                   tokenizer=tokenizer,
                                                   knowledge_path="../../data/knowledge/conceptnet.csv",
                                                   max_entities=max_entities,
-                                                  entity_sample='random')
+                                                  entity_sample='weighted')
     eval_dataset = CSQA2DatasetWithVisibleMatrix(data_path="../../data/csqa2/dev.json",
                                                  tokenizer=tokenizer,
                                                  knowledge_path="../../data/knowledge/conceptnet.csv",
                                                  max_entities=max_entities,
-                                                 entity_sample='random')
+                                                 entity_sample='weighted')
     model = BertForSequenceClassification.from_pretrained('bert-base-uncased')
     run_experiment(
         model=model,

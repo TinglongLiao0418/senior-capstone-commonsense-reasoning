@@ -1,0 +1,18 @@
+MAX ENTITIES: 20
+{'loss': 0.6964, 'learning_rate': 4.568221070811745e-06, 'epoch': 0.43}
+{'loss': 0.69, 'learning_rate': 4.136442141623489e-06, 'epoch': 0.86}
+{'eval_loss': 0.6833263635635376, 'eval_accuracy': 0.5548996458087367, 'eval_precision': 0.5298602287166455, 'eval_recall': 0.6808163265306122, 'eval_f1': 0.5959271168274383, 'eval_runtime': 89.7099, 'eval_samples_per_second': 28.325, 'eval_steps_per_second': 3.545, 'epoch': 1.0}
+{'loss': 0.678, 'learning_rate': 3.7046632124352333e-06, 'epoch': 1.3}
+{'loss': 0.6696, 'learning_rate': 3.2728842832469777e-06, 'epoch': 1.73}
+{'eval_loss': 0.6940190196037292, 'eval_accuracy': 0.5584415584415584, 'eval_precision': 0.543313708999159, 'eval_recall': 0.5273469387755102, 'eval_f1': 0.5352112676056338, 'eval_runtime': 89.4436, 'eval_samples_per_second': 28.409, 'eval_steps_per_second': 3.555, 'epoch': 2.0}
+{'loss': 0.6484, 'learning_rate': 2.8411053540587218e-06, 'epoch': 2.16}
+{'loss': 0.6283, 'learning_rate': 2.4093264248704666e-06, 'epoch': 2.59}
+{'eval_loss': 0.715822696685791, 'eval_accuracy': 0.5419126328217237, 'eval_precision': 0.5229495861550038, 'eval_recall': 0.5673469387755102, 'eval_f1': 0.5442443226311667, 'eval_runtime': 88.8695, 'eval_samples_per_second': 28.593, 'eval_steps_per_second': 3.578, 'epoch': 3.0}
+{'loss': 0.627, 'learning_rate': 1.9775474956822106e-06, 'epoch': 3.02}
+{'loss': 0.5783, 'learning_rate': 1.5457685664939553e-06, 'epoch': 3.45}
+{'loss': 0.5834, 'learning_rate': 1.1139896373056995e-06, 'epoch': 3.89}
+{'eval_loss': 0.757927656173706, 'eval_accuracy': 0.5493900039354584, 'eval_precision': 0.5288600288600288, 'eval_recall': 0.5983673469387755, 'eval_f1': 0.5614707008808885, 'eval_runtime': 90.3578, 'eval_samples_per_second': 28.122, 'eval_steps_per_second': 3.519, 'epoch': 4.0}
+{'loss': 0.5613, 'learning_rate': 6.82210708117444e-07, 'epoch': 4.32}
+{'loss': 0.5405, 'learning_rate': 2.5043177892918825e-07, 'epoch': 4.75}
+{'eval_loss': 0.7808386087417603, 'eval_accuracy': 0.5525383707201889, 'eval_precision': 0.5301783264746228, 'eval_recall': 0.6310204081632653, 'eval_f1': 0.5762206485277674, 'eval_runtime': 87.4618, 'eval_samples_per_second': 29.053, 'eval_steps_per_second': 3.636, 'epoch': 5.0}
+{'train_runtime': 3069.816, 'train_samples_per_second': 15.089, 'train_steps_per_second': 1.886, 'train_loss': 0.6232021325198686, 'epoch': 5.0}

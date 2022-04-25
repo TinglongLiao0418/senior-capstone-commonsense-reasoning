@@ -366,6 +366,7 @@ if __name__ == '__main__':
     knowledgepath = '../data/knowledge/conceptnet.csv'
     # dataset = CSQA2DatasetWithVisibleMatrixForT5(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
     dataset = CorruptedConceptNet(tokenizer=tokenizer, path=knowledgepath)
+    print(len(dataset))
     dataloader = DataLoader(dataset=dataset, collate_fn=dataset.collate_fn, batch_size=4)
 
     for i in tqdm(dataloader):

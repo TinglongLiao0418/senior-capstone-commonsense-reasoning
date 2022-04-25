@@ -62,48 +62,54 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
     def _create_lookup_table(self, knowledge_path):
         self.knowledge = defaultdict(set)
         self.relations = {
-            'Antonym': 'is an antonym of',
-            'AtLocation': 'is located in',
-            'CapableOf': 'is capable of',
-            'Causes': 'causes',
-            'CausesDesire': 'causes the desire to',
-            'CreatedBy': 'is created by',
-            'DefinedAs': 'is defined as',
-            'DerivedFrom': 'is derived from',
-            'Desires': 'desires',
-            'DistinctFrom': 'is distinct from',
-            'Entails': 'entails',
-            'EtymologicallyDerivedFrom': 'is derived from',
-            'EtymologicallyRelatedTo': 'has a common origin as',
-            'FormOf': 'is a form of',
-            'HasA': 'has a',
-            'HasContext': 'is used in the context of',
-            'HasFirstSubevent': 'is the first subevent of',
-            'HasLastSubevent': 'is the last subevent of',
-            'HasPrerequisite': 'has the prerequisite of',
-            'HasProperty': 'has the property of',
-            'HasSubevent': 'has a subevent of',
-            'InstanceOf': 'is an instance of',
-            'IsA': 'is a',
-            'LocatedNear': 'is located near',
-            'MadeOf': 'is made of',
-            'MannerOf': 'is a manner of',
-            'MotivatedByGoal': 'is motivated by',
-            'NotCapableOf': 'is not capable of',
-            'NotDesires': 'not desires',
-            'NotHasProperty': 'not has the property of',
-            'PartOf': 'is part of',
-            'ReceivesAction': 'receives action of',
-            'RelatedTo': 'is related to',
-            'SimilarTo': 'is similar to',
-            'SymbolOf': 'symbolically represents',
-            'UsedFor': 'is used for',
+            'antonym': 'is an antonym of',
+            'atlocation': 'is located in',
+            'capableof': 'is capable of',
+            'causes': 'causes',
+            'causesdesire': 'causes the desire to',
+            'createdby': 'is created by',
+            'definedas': 'is defined as',
+            'derivedfrom': 'is derived from',
+            'desires': 'desires',
+            'distinctfrom': 'is distinct from',
+            'entails': 'entails',
+            'etymologicallyderivedfrom': 'is derived from',
+            'etymologicallyrelatedto': 'has a common origin as',
+            'formof': 'is a form of',
+            'hasa': 'has a',
+            'hascontext': 'is used in the context of',
+            'hasfirstsubevent': 'is the first subevent of',
+            'haslastsubevent': 'is the last subevent of',
+            'hasprerequisite': 'has the prerequisite of',
+            'hasproperty': 'has the property of',
+            'hassubevent': 'has a subevent of',
+            'instanceof': 'is an instance of',
+            'isa': 'is a',
+            'locatednear': 'is located near',
+            'madeof': 'is made of',
+            'mannerof': 'is a manner of',
+            'motivatedbygoal': 'is motivated by',
+            'notcapableof': 'is not capable of',
+            'notdesires': 'not desires',
+            'nothasproperty': 'not has the property of',
+            'obstructedby': 'is obstructed by',
+            'partof': 'is part of',
+            'receivesaction': 'receives action of',
+            'relatedto': 'is related to',
+            'similarto': 'is similar to',
+            'symbolof': 'symbolically represents',
+            'synonym': 'is a synonym of',
+            'usedfor': 'is used for',
             'dbpedia': ''
         }
 
         with open(knowledge_path, 'r', encoding='utf-8') as f:
             for line in f:
                 relation, start, end = [i.lower().replace('_', ' ') for i in line.strip().split("\t")]
+                try:
+                    relation = self.relations[relation]
+                except:
+                    relation = relation
                 value = "{} {}".format(relation, end)
                 self.knowledge[start].add(value)
 
@@ -295,6 +301,47 @@ class CSQA2DatasetWithVisibleMatrixForT5(CSQA2DatasetWithVisibleMatrix):
 
 class CorruptedConceptNet(Dataset):
     def __init__(self, path, tokenizer, max_context_num=10, corrupt_ratio=0.5):
+        self.relations = {
+            'antonym': 'is an antonym of',
+            'atlocation': 'is located in',
+            'capableof': 'is capable of',
+            'causes': 'causes',
+            'causesdesire': 'causes the desire to',
+            'createdby': 'is created by',
+            'definedas': 'is defined as',
+            'derivedfrom': 'is derived from',
+            'desires': 'desires',
+            'distinctfrom': 'is distinct from',
+            'entails': 'entails',
+            'etymologicallyderivedfrom': 'is derived from',
+            'etymologicallyrelatedto': 'has a common origin as',
+            'formof': 'is a form of',
+            'hasa': 'has a',
+            'hascontext': 'is used in the context of',
+            'hasfirstsubevent': 'is the first subevent of',
+            'haslastsubevent': 'is the last subevent of',
+            'hasprerequisite': 'has the prerequisite of',
+            'hasproperty': 'has the property of',
+            'hassubevent': 'has a subevent of',
+            'instanceof': 'is an instance of',
+            'isa': 'is a',
+            'locatednear': 'is located near',
+            'madeof': 'is made of',
+            'mannerof': 'is a manner of',
+            'motivatedbygoal': 'is motivated by',
+            'notcapableof': 'is not capable of',
+            'notdesires': 'not desires',
+            'nothasproperty': 'not has the property of',
+            'obstructedby': 'is obstructed by',
+            'partof': 'is part of',
+            'receivesaction': 'receives action of',
+            'relatedto': 'is related to',
+            'similarto': 'is similar to',
+            'symbolof': 'symbolically represents',
+            'synonym': 'is a synonym of',
+            'usedfor': 'is used for',
+            'dbpedia': ''
+        }
         self._read_conceptnet(path)
         self.tokenizer = tokenizer
         self.max_context_num = max_context_num
@@ -318,6 +365,10 @@ class CorruptedConceptNet(Dataset):
         with open(path, 'r', encoding='utf-8') as f:
             for line in f:
                 relation, start, end = [i.lower().replace('_', ' ') for i in line.strip().split("\t")]
+                try:
+                    relation = self.relations[relation]
+                except:
+                    relation = relation
 
                 example = {
                     'start': start,

@@ -82,6 +82,45 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
     
     def _create_lookup_table(self, knowledge_path):
         self.knowledge = defaultdict(set)
+        self.relations = {
+            'Antonym': 'is an antonym of',
+            'AtLocation': 'is located in',
+            'CapableOf': 'is capable of',
+            'Causes': 'causes',
+            'CausesDesire': 'causes the desire to',
+            'CreatedBy': 'is created by',
+            'DefinedAs': 'is defined as',
+            'DerivedFrom': 'is derived from',
+            'Desires': 'desires',
+            'DistinctFrom': 'is distinct from',
+            'Entails': 'entails',
+            'EtymologicallyDerivedFrom': 'is derived from',
+            'EtymologicallyRelatedTo': 'has a common origin as',
+            'FormOf': 'is a form of',
+            'HasA': 'has a',
+            'HasContext': 'is used in the context of',
+            'HasFirstSubevent': 'is the first subevent of',
+            'HasLastSubevent': 'is the last subevent of',
+            'HasPrerequisite': 'has the prerequisite of',
+            'HasProperty': 'has the property of',
+            'HasSubevent': 'has a subevent of',
+            'InstanceOf': 'is an instance of',
+            'IsA': 'is a',
+            'LocatedNear': 'is located near',
+            'MadeOf': 'is made of',
+            'MannerOf': 'is a manner of',
+            'MotivatedByGoal': 'is motivated by',
+            'NotCapableOf': 'is not capable of',
+            'NotDesires': 'not desires',
+            'NotHasProperty': 'not has the property of',
+            'PartOf': 'is part of',
+            'ReceivesAction': 'receives action of',
+            'RelatedTo': 'is related to',
+            'SimilarTo': 'is similar to',
+            'SymbolOf': 'symbolically represents',
+            'UsedFor': 'is used for',
+            'dbpedia': ''
+        }
 
         with open(knowledge_path, 'r', encoding='utf-8') as f:
             for line in f:

@@ -22,9 +22,9 @@ if __name__ == '__main__':
         eval_steps=5e4,
         save_strategy="steps",
         save_steps=5e4,
-        per_device_train_batch_size=8,
-        per_device_eval_batch_size=8,
-        gradient_accumulation_steps=1,
+        per_device_train_batch_size=4,
+        per_device_eval_batch_size=4,
+        gradient_accumulation_steps=2,
         data_collator=train_dataset.collate_fn,
         output_dir="log/pretrain",
         learning_rate=1e-4

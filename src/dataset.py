@@ -365,10 +365,8 @@ class CorruptedConceptNet(Dataset):
         with open(path, 'r', encoding='utf-8') as f:
             for line in f:
                 relation, start, end = [i.lower().replace('_', ' ') for i in line.strip().split("\t")]
-                try:
+                if relation in self.relations:
                     relation = self.relations[relation]
-                except:
-                    relation = relation
 
                 example = {
                     'start': start,

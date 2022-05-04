@@ -21,17 +21,13 @@ if __name__ == '__main__':
         model=model,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        epoch=1,
-        evaluation_strategy="steps",
-        eval_steps=5e4,
-        save_strategy="steps",
-        save_steps=5e4,
+        epoch=4,
         per_device_train_batch_size=4,
         per_device_eval_batch_size=8,
         gradient_accumulation_steps=2,
         data_collator=train_dataset.collate_fn,
         output_dir="log/csqa2-t5",
         learning_rate=1e-4,
-        resume_from_checkpoint='log/pretrain-checkpoint-50000'
+        resume_from_checkpoint='log/pretrain/checkpoint-50000'
     )
 

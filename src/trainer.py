@@ -17,7 +17,7 @@ def compute_metric(eval_pred):
 def run_experiment(model, train_dataset, eval_dataset, data_collator, output_dir='log', learning_rate=5e-6,
                    per_device_train_batch_size=8, per_device_eval_batch_size=8, gradient_accumulation_steps=1,
                    evaluation_strategy='epoch', eval_steps=2e4, save_strategy='epoch', save_steps=2e4,
-                   epoch=5, seed=42):
+                   epoch=5, seed=42, resume_from_checkpoint=False):
     train_args = TrainingArguments(
         output_dir=output_dir,
         learning_rate=learning_rate,
@@ -41,4 +41,4 @@ def run_experiment(model, train_dataset, eval_dataset, data_collator, output_dir
         compute_metrics=compute_metric
     )
 
-    trainer.train()
+    trainer.train(resume_from_checkpoint=resume_from_checkpoint)

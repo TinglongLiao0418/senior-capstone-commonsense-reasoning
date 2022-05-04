@@ -51,7 +51,6 @@ class CSQA2DatasetBase(Dataset):
         }
 
 
-
 class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
     def __init__(self, data_path, tokenizer, knowledge_path, max_entities=10, entity_sample='weighted'):
         super(CSQA2DatasetWithVisibleMatrix, self).__init__(data_path, tokenizer)
@@ -299,6 +298,43 @@ class CSQA2DatasetWithVisibleMatrixForT5(CSQA2DatasetWithVisibleMatrix):
         }
 
 
+class CSQA2DatasetForT5(CSQA2DatasetWithVisibleMatrix):
+    def __init__(self, data_path, tokenizer, knowledge_path, max_entities=10, entity_sample='weighted'):
+        super(CSQA2DatasetForT5, self).__init__(data_path, tokenizer, knowledge_path, max_entities, entity_sample)
+
+
+    def collate_fn(self, batch):
+
+        for example in batch:
+            example["statement"] = example['question']
+
+            all_related_entities = self.knowledge[example['topic_prompt']]
+            entities = random.sample(all_related_entities, min(self.max_entities, len(all_related_entities)))
+
+            context = '. '.join([example['topic_prompt'] + ' ' + e for e in entities])
+            example["context"] = context
+
+        encoding = self.tokenizer(
+            ["statement: " + example['statement'] + "context: " + example['context'] for example in batch],
+            padding="longest",
+            return_tensors="pt",
+        )
+        input_ids, attention_mask = encoding.input_ids, encoding.attention_mask
+
+        target_encoding = self.tokenizer(
+            [example["answer"] for example in batch],
+            padding="longest",
+            return_tensors="pt"
+        )
+        labels = target_encoding.input_ids
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels
+        }
+
+
 class CorruptedConceptNet(Dataset):
     def __init__(self, path, tokenizer, max_context_num=10, corrupt_ratio=0.5):
         self.relations = {
@@ -450,10 +486,10 @@ if __name__ == '__main__':
     from tqdm import tqdm
 
     tokenizer = AutoTokenizer.from_pretrained('t5-small')
-    datapath = '../data/csqa2/dev.json'
+    datapath = '../data/csqa2/train.json'
     knowledgepath = '../data/knowledge/conceptnet.csv'
-    # dataset = CSQA2DatasetWithVisibleMatrixForT5(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
-    dataset = CorruptedConceptNet(tokenizer=tokenizer, path=knowledgepath)
+    dataset = CSQA2DatasetForT5(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
+    # dataset = CorruptedConceptNet(tokenizer=tokenizer, path=knowledgepath)
     print(len(dataset))
     dataloader = DataLoader(dataset=dataset, collate_fn=dataset.collate_fn, batch_size=4)
 

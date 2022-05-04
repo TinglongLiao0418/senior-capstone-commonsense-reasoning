@@ -13,19 +13,21 @@ if __name__ == '__main__':
     tokenizer = T5Tokenizer.from_pretrained('t5-large')
     train_dataset = CSQA2DatasetForT5(data_path="../../data/csqa2/train.json",
                                       tokenizer=tokenizer,
-                                      knowledge_path="../../data/knowledge/conceptnet.csv")
+                                      knowledge_path="../../data/knowledge/conceptnet.csv",
+                                      max_entities=5)
     eval_dataset = CSQA2DatasetForT5(data_path="../../data/csqa2/dev.json",
                                       tokenizer=tokenizer,
-                                      knowledge_path="../../data/knowledge/conceptnet.csv")
+                                      knowledge_path="../../data/knowledge/conceptnet.csv",
+                                     max_entities=5)
     model = T5ForConditionalGeneration.from_pretrained(config['model'])
     run_experiment(
         model=model,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         epoch=4,
-        per_device_train_batch_size=4,
-        per_device_eval_batch_size=8,
-        gradient_accumulation_steps=2,
+        per_device_train_batch_size=1,
+        per_device_eval_batch_size=1,
+        gradient_accumulation_steps=8,
         data_collator=train_dataset.collate_fn,
         output_dir="log/csqa2-t5",
         learning_rate=1e-4,

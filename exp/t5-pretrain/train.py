@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
     config = {'model': 'log/pretrain/checkpoint-50000'}
 
-    tokenizer = T5Tokenizer.from_pretrained(config['model'])
+    tokenizer = T5Tokenizer.from_pretrained('t5-large')
     train_dataset = CSQA2DatasetForT5(data_path="../../data/csqa2/train.json",
                                       tokenizer=tokenizer,
                                       knowledge_path="../../data/knowledge/conceptnet.csv")

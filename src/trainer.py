@@ -2,6 +2,21 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from transformers import Trainer, TrainingArguments
 
 
+def compute_metric_for_t5(eval_pred):
+    labels = eval_pred.label_ids
+    preds = eval_pred.predictions[1].argmax(-1)
+
+    r = 0
+    for i in labels.size(0):
+        if labels[i][0].item() == preds[i][0].item():
+            r += 1
+
+    return {
+        'accuracy': r / labels.size(0)
+    }
+
+
+
 def compute_metric(eval_pred):
     labels = eval_pred.label_ids
     preds = eval_pred.predictions.argmax(-1)
@@ -38,7 +53,7 @@ def run_experiment(model, train_dataset, eval_dataset, data_collator, output_dir
         data_collator=data_collator,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        compute_metrics=compute_metric
+        compute_metrics=compute_metric_for_t5
     )
 
     trainer.train(resume_from_checkpoint=resume_from_checkpoint)

@@ -488,7 +488,7 @@ if __name__ == '__main__':
     tokenizer = AutoTokenizer.from_pretrained('t5-small')
     datapath = '../data/csqa2/train.json'
     knowledgepath = '../data/knowledge/conceptnet.csv'
-    dataset = CSQA2DatasetForT5(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath)
+    dataset = CSQA2DatasetForT5(tokenizer=tokenizer, data_path=datapath, knowledge_path=knowledgepath, max_entities=2)
     # dataset = CorruptedConceptNet(tokenizer=tokenizer, path=knowledgepath)
     print(len(dataset))
     dataloader = DataLoader(dataset=dataset, collate_fn=dataset.collate_fn, batch_size=4)

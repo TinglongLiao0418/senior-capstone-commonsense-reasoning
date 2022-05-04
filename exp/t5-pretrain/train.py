@@ -8,7 +8,8 @@ from src.trainer import run_experiment
 
 if __name__ == '__main__':
 
-    config = {'model': 't5-large'}
+    config = {'model': 'log/pretrain/checkpoint-50000'}
+
     tokenizer = T5Tokenizer.from_pretrained(config['model'])
     train_dataset = CSQA2DatasetForT5(data_path="../../data/csqa2/train.json",
                                       tokenizer=tokenizer,
@@ -28,6 +29,5 @@ if __name__ == '__main__':
         data_collator=train_dataset.collate_fn,
         output_dir="log/csqa2-t5",
         learning_rate=1e-4,
-        resume_from_checkpoint='log/pretrain/checkpoint-50000'
     )
 

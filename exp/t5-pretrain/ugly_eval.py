@@ -8,8 +8,8 @@ from src.dataset import CSQA2DatasetForT5
 
 if __name__ == '__main__':
     model_path = 'log/csqa2-t5/checkpoint-4632'
-    datapath = '../data/csqa2/train.json'
-    knowledgepath = '../data/knowledge/conceptnet.csv'
+    datapath = '../../data/csqa2/dev.json'
+    knowledgepath = '../../data/knowledge/conceptnet.csv'
 
     model = T5ForConditionalGeneration.from_pretrained(model_path)
     tokenizer = T5Tokenizer.from_pretrained('t5-large')
@@ -18,11 +18,11 @@ if __name__ == '__main__':
 
     tot, right = 0, 0
     for data in tqdm(dataloader):
-        prediction = model(input_ids=data['input_ids'], attention_mask=data['attention_mask']).logits.argmax(-1)
+        prediction = model(**data).logits.argmax(-1)
         labels = data['labels']
         result = (prediction == labels).all(dim=1)
         tot += result.size(0)
-        right = result.int().sum().item()
+        right += result.int().sum().item()
 
     print(right / tot)
 

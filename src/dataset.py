@@ -99,7 +99,8 @@ class CSQA2DatasetWithVisibleMatrix(CSQA2DatasetBase):
             'symbolof': 'symbolically represents',
             'synonym': 'is a synonym of',
             'usedfor': 'is used for',
-            'dbpedia': ''
+            'dbpedia': '',
+            'externalurl': ''
         }
 
         with open(knowledge_path, 'r', encoding='utf-8') as f:
@@ -376,7 +377,8 @@ class CorruptedConceptNet(Dataset):
             'symbolof': 'symbolically represents',
             'synonym': 'is a synonym of',
             'usedfor': 'is used for',
-            'dbpedia': ''
+            'dbpedia': '',
+            'externalurl': ''
         }
         self._read_conceptnet(path)
         self.tokenizer = tokenizer
